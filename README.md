@@ -47,6 +47,10 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - Added `mcp_stdio_server.py` using `mcp.server.fastmcp.FastMCP`
   - Registered the same tools (`health_check`, `stock_fundamentals`, `earnings_analyzer`, `portfolio_tracker`)
   - Keeps FastAPI HTTP mode and MCP stdio mode side-by-side for demos
+- Module 8 completed: A2A task execution API
+  - Added `POST /a2a/tasks` to create agent tasks (`call_tool`)
+  - Added `GET /a2a/tasks/{task_id}` to poll task status/result
+  - Reused existing tool execution path for MCP + A2A parity
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -61,7 +65,8 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 10. [x] Containerize with Docker
 11. [x] Deploy with Cloud Build + Cloud Run (pipeline file added)
 12. [x] Add official MCP SDK server entrypoint
-13. [ ] Write MCP + A2A integration guide
+13. [x] Add A2A task execution endpoint
+14. [ ] Write MCP + A2A integration guide
 
 ## Business Value
 Extends any AI assistant with live Indian market data.
@@ -76,6 +81,7 @@ Extends any AI assistant with live Indian market data.
 - Together:
   - MCP = how tools are invoked
   - A2A = how agents find and understand each other
+  - A2A task API = how agents can request/track work asynchronously
 
 ## MCP Request Examples
 List tools:
@@ -177,6 +183,19 @@ curl.exe -X POST "http://127.0.0.1:8000/mcp" ^
 Run MCP smoke test client:
 ```powershell
 python scripts/mcp_smoke_test.py --base-url http://127.0.0.1:8000
+```
+
+A2A task create:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/a2a/tasks" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"action":"call_tool","tool_name":"stock_fundamentals","arguments":{"symbol":"INFY","exchange":"NSE"},"requester":"demo-agent"}'
+```
+
+A2A task poll:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/a2a/tasks/<task_id>" -Method Get
 ```
 
 Docker run:

@@ -9,7 +9,9 @@ This is intentionally small and incremental:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 
@@ -21,7 +23,7 @@ from tools.stock_fundamentals import get_stock_fundamentals
 app = FastAPI(
     title="mcp-finance-server",
     description="Incremental MCP finance server with A2A discovery.",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 
@@ -103,6 +105,7 @@ def agent_card() -> dict:
             "health": "/health",
             "agent_card": "/.well-known/agent.json",
             "mcp": "/mcp",
+            "a2a_tasks": "/a2a/tasks",
         },
     }
 
@@ -198,6 +201,25 @@ def _mcp_error(response_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": response_id, "error": {"code": code, "message": message}}
 
 
+def _execute_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    if tool_name == "health_check":
+        return _tool_health_check()
+    if tool_name == "stock_fundamentals":
+        return _tool_stock_fundamentals(arguments)
+    if tool_name == "earnings_analyzer":
+        return _tool_earnings_analyzer(arguments)
+    if tool_name == "portfolio_tracker":
+        return _tool_portfolio_tracker(arguments)
+    raise ValueError(f"Tool not found: {tool_name}")
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+A2A_TASKS: dict[str, dict[str, Any]] = {}
+
+
 @app.post("/mcp")
 def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
     """
@@ -226,20 +248,71 @@ def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
         arguments = params.get("arguments", {})
 
         try:
-            if tool_name == "health_check":
-                return _mcp_success(request_id, {"content": [{"type": "json", "json": _tool_health_check()}]})
-            if tool_name == "stock_fundamentals":
-                result = _tool_stock_fundamentals(arguments)
-                return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
-            if tool_name == "earnings_analyzer":
-                result = _tool_earnings_analyzer(arguments)
-                return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
-            if tool_name == "portfolio_tracker":
-                result = _tool_portfolio_tracker(arguments)
-                return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
+            result = _execute_tool(tool_name=tool_name, arguments=arguments)
+            return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
         except Exception as exc:
             return _mcp_error(request_id, -32000, str(exc))
 
-        return _mcp_error(request_id, -32601, f"Tool not found: {tool_name}")
-
     return _mcp_error(request_id, -32601, f"Method not found: {method}")
+
+
+@app.post("/a2a/tasks")
+def create_a2a_task(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Create an A2A task that requests this agent to execute one tool.
+
+    Payload:
+    {
+      "action": "call_tool",
+      "tool_name": "stock_fundamentals",
+      "arguments": {"symbol": "INFY", "exchange": "NSE"},
+      "requester": "agent-name-optional"
+    }
+    """
+    action = payload.get("action")
+    tool_name = payload.get("tool_name")
+    arguments = payload.get("arguments", {})
+    requester = payload.get("requester")
+
+    if action != "call_tool":
+        raise HTTPException(status_code=400, detail="Unsupported action. Use 'call_tool'.")
+    if not tool_name:
+        raise HTTPException(status_code=400, detail="Missing required field: tool_name")
+
+    task_id = str(uuid4())
+    task = {
+        "task_id": task_id,
+        "status": "running",
+        "action": action,
+        "tool_name": tool_name,
+        "arguments": arguments,
+        "requester": requester,
+        "created_at": _utc_now_iso(),
+        "updated_at": _utc_now_iso(),
+        "result": None,
+        "error": None,
+    }
+    A2A_TASKS[task_id] = task
+
+    try:
+        result = _execute_tool(tool_name=tool_name, arguments=arguments)
+        task["result"] = result
+        task["status"] = "completed"
+    except Exception as exc:
+        task["error"] = str(exc)
+        task["status"] = "failed"
+    task["updated_at"] = _utc_now_iso()
+
+    return {
+        "task_id": task_id,
+        "status": task["status"],
+        "poll_url": f"/a2a/tasks/{task_id}",
+    }
+
+
+@app.get("/a2a/tasks/{task_id}")
+def get_a2a_task(task_id: str) -> dict[str, Any]:
+    task = A2A_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
+    return task
