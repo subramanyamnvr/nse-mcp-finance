@@ -27,14 +27,17 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - `POST /mcp` with JSON-RPC methods: `tools/list`, `tools/call`
   - `stock_fundamentals` implemented in `tools/stock_fundamentals.py`
   - `health_check` and `stock_fundamentals` registered in MCP tool registry
+- Module 3 completed: earnings analyzer module
+  - `earnings_analyzer` implemented in `tools/earnings_analyzer.py`
+  - `earnings_analyzer` registered in both MCP registry and A2A agent card
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
 2. [x] Add A2A discovery endpoint
 3. [x] Build stock fundamentals tool
 4. [x] Register first tools with MCP endpoint
-5. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
-6. [ ] Build earnings analyzer tool
+5. [x] Build earnings analyzer tool
+6. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
 7. [ ] Build portfolio tracker tool
 8. [ ] Add tool schemas
 9. [ ] Test with MCP client
@@ -77,6 +80,22 @@ Call stock fundamentals:
     "name": "stock_fundamentals",
     "arguments": {
       "symbol": "INFY",
+      "exchange": "NSE"
+    }
+  }
+}
+```
+
+Call earnings analyzer:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "earnings_analyzer",
+    "arguments": {
+      "symbol": "TCS",
       "exchange": "NSE"
     }
   }

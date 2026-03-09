@@ -13,13 +13,14 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from tools.earnings_analyzer import get_earnings_analysis
 from tools.stock_fundamentals import get_stock_fundamentals
 
 
 app = FastAPI(
     title="mcp-finance-server",
     description="Incremental MCP finance server with A2A discovery.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 
@@ -57,10 +58,21 @@ def agent_card() -> dict:
                         },
                         "required": ["symbol"],
                     },
+                },
+                {
+                    "name": "earnings_analyzer",
+                    "description": "Returns earnings-focused metrics for a symbol.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {"type": "string"},
+                            "exchange": {"type": "string", "default": "NSE"},
+                        },
+                        "required": ["symbol"],
+                    },
                 }
             ],
             "planned_tools": [
-                "earnings_analyzer",
                 "portfolio_tracker",
             ],
         },
@@ -88,6 +100,17 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["symbol"],
         },
     },
+    "earnings_analyzer": {
+        "description": "Returns earnings-focused metrics for a symbol.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "exchange": {"type": "string", "default": "NSE"},
+            },
+            "required": ["symbol"],
+        },
+    },
 }
 
 
@@ -101,6 +124,14 @@ def _tool_stock_fundamentals(arguments: dict[str, Any]) -> dict[str, Any]:
     if not symbol:
         raise ValueError("Missing required argument: symbol")
     return get_stock_fundamentals(symbol=symbol, exchange=exchange)
+
+
+def _tool_earnings_analyzer(arguments: dict[str, Any]) -> dict[str, Any]:
+    symbol = arguments.get("symbol")
+    exchange = arguments.get("exchange", "NSE")
+    if not symbol:
+        raise ValueError("Missing required argument: symbol")
+    return get_earnings_analysis(symbol=symbol, exchange=exchange)
 
 
 def _mcp_success(response_id: Any, result: Any) -> dict[str, Any]:
@@ -143,6 +174,9 @@ def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
                 return _mcp_success(request_id, {"content": [{"type": "json", "json": _tool_health_check()}]})
             if tool_name == "stock_fundamentals":
                 result = _tool_stock_fundamentals(arguments)
+                return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
+            if tool_name == "earnings_analyzer":
+                result = _tool_earnings_analyzer(arguments)
                 return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
         except Exception as exc:
             return _mcp_error(request_id, -32000, str(exc))
