@@ -14,13 +14,14 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 
 from tools.earnings_analyzer import get_earnings_analysis
+from tools.portfolio_tracker import analyze_portfolio
 from tools.stock_fundamentals import get_stock_fundamentals
 
 
 app = FastAPI(
     title="mcp-finance-server",
     description="Incremental MCP finance server with A2A discovery.",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 
@@ -70,11 +71,33 @@ def agent_card() -> dict:
                         },
                         "required": ["symbol"],
                     },
+                },
+                {
+                    "name": "portfolio_tracker",
+                    "description": "Returns current valuation and P/L for provided holdings.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "holdings": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "symbol": {"type": "string"},
+                                        "quantity": {"type": "number"},
+                                        "average_buy_price": {"type": "number"},
+                                        "exchange": {"type": "string", "default": "NSE"},
+                                    },
+                                    "required": ["symbol", "quantity"],
+                                },
+                            },
+                            "default_exchange": {"type": "string", "default": "NSE"},
+                        },
+                        "required": ["holdings"],
+                    },
                 }
             ],
-            "planned_tools": [
-                "portfolio_tracker",
-            ],
+            "planned_tools": [],
         },
         "endpoints": {
             "health": "/health",
@@ -111,6 +134,29 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["symbol"],
         },
     },
+    "portfolio_tracker": {
+        "description": "Returns current valuation and P/L for provided holdings.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "holdings": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {"type": "string"},
+                            "quantity": {"type": "number"},
+                            "average_buy_price": {"type": "number"},
+                            "exchange": {"type": "string", "default": "NSE"},
+                        },
+                        "required": ["symbol", "quantity"],
+                    },
+                },
+                "default_exchange": {"type": "string", "default": "NSE"},
+            },
+            "required": ["holdings"],
+        },
+    },
 }
 
 
@@ -132,6 +178,16 @@ def _tool_earnings_analyzer(arguments: dict[str, Any]) -> dict[str, Any]:
     if not symbol:
         raise ValueError("Missing required argument: symbol")
     return get_earnings_analysis(symbol=symbol, exchange=exchange)
+
+
+def _tool_portfolio_tracker(arguments: dict[str, Any]) -> dict[str, Any]:
+    holdings = arguments.get("holdings")
+    default_exchange = arguments.get("default_exchange", "NSE")
+    if holdings is None:
+        raise ValueError("Missing required argument: holdings")
+    if not isinstance(holdings, list):
+        raise ValueError("holdings must be an array")
+    return analyze_portfolio(holdings=holdings, default_exchange=default_exchange)
 
 
 def _mcp_success(response_id: Any, result: Any) -> dict[str, Any]:
@@ -177,6 +233,9 @@ def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
                 return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
             if tool_name == "earnings_analyzer":
                 result = _tool_earnings_analyzer(arguments)
+                return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
+            if tool_name == "portfolio_tracker":
+                result = _tool_portfolio_tracker(arguments)
                 return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
         except Exception as exc:
             return _mcp_error(request_id, -32000, str(exc))

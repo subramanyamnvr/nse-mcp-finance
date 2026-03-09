@@ -30,6 +30,10 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 - Module 3 completed: earnings analyzer module
   - `earnings_analyzer` implemented in `tools/earnings_analyzer.py`
   - `earnings_analyzer` registered in both MCP registry and A2A agent card
+- Module 4 completed: portfolio tracker module
+  - `portfolio_tracker` implemented in `tools/portfolio_tracker.py`
+  - Calculates per-position current value and P/L, plus portfolio totals
+  - Registered in MCP registry and A2A agent card
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -37,8 +41,8 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 3. [x] Build stock fundamentals tool
 4. [x] Register first tools with MCP endpoint
 5. [x] Build earnings analyzer tool
-6. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
-7. [ ] Build portfolio tracker tool
+6. [x] Build portfolio tracker tool
+7. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
 8. [ ] Add tool schemas
 9. [ ] Test with MCP client
 10. [ ] Containerize with Docker
@@ -97,6 +101,25 @@ Call earnings analyzer:
     "arguments": {
       "symbol": "TCS",
       "exchange": "NSE"
+    }
+  }
+}
+```
+
+Call portfolio tracker:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "portfolio_tracker",
+    "arguments": {
+      "default_exchange": "NSE",
+      "holdings": [
+        {"symbol": "INFY", "quantity": 10, "average_buy_price": 1450},
+        {"symbol": "TCS", "quantity": 4, "average_buy_price": 3600}
+      ]
     }
   }
 }
