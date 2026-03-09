@@ -13,6 +13,7 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 
 ## Project Structure
 - `server.py`
+- `mcp_stdio_server.py`
 - `tools/stock_fundamentals.py`
 - `tools/earnings_analyzer.py`
 - `tools/portfolio_tracker.py`
@@ -42,6 +43,10 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 - Module 6 completed: MCP client smoke-test module
   - Added `scripts/mcp_smoke_test.py`
   - Validates `tools/list` and `tools/call` (`health_check`) over HTTP JSON-RPC
+- Module 7 completed: official MCP SDK server module
+  - Added `mcp_stdio_server.py` using `mcp.server.fastmcp.FastMCP`
+  - Registered the same tools (`health_check`, `stock_fundamentals`, `earnings_analyzer`, `portfolio_tracker`)
+  - Keeps FastAPI HTTP mode and MCP stdio mode side-by-side for demos
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -55,7 +60,8 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 9. [x] Test with MCP client (smoke test script)
 10. [x] Containerize with Docker
 11. [x] Deploy with Cloud Build + Cloud Run (pipeline file added)
-12. [ ] Write MCP + A2A integration guide
+12. [x] Add official MCP SDK server entrypoint
+13. [ ] Write MCP + A2A integration guide
 
 ## Business Value
 Extends any AI assistant with live Indian market data.
@@ -141,6 +147,12 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
+
+Run official MCP SDK server (stdio):
+```powershell
+python mcp_stdio_server.py
+```
+Use this mode with MCP-native clients that launch servers as subprocesses.
 
 Health check:
 ```powershell
