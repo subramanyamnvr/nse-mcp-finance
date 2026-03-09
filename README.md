@@ -16,6 +16,7 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 - `tools/stock_fundamentals.py`
 - `tools/earnings_analyzer.py`
 - `tools/portfolio_tracker.py`
+- `scripts/mcp_smoke_test.py`
 - `Dockerfile`
 - `cloudbuild.yaml`
 
@@ -38,6 +39,9 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - Added `requirements.txt`
   - Added runnable `Dockerfile`
   - Added `cloudbuild.yaml` deployment pipeline for Cloud Run
+- Module 6 completed: MCP client smoke-test module
+  - Added `scripts/mcp_smoke_test.py`
+  - Validates `tools/list` and `tools/call` (`health_check`) over HTTP JSON-RPC
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -47,8 +51,8 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 5. [x] Build earnings analyzer tool
 6. [x] Build portfolio tracker tool
 7. [x] Add runtime dependencies and basic container/deploy setup
-8. [ ] Add tool schemas
-9. [ ] Test with MCP client
+8. [x] Add tool schemas
+9. [x] Test with MCP client (smoke test script)
 10. [x] Containerize with Docker
 11. [x] Deploy with Cloud Build + Cloud Run (pipeline file added)
 12. [ ] Write MCP + A2A integration guide
@@ -145,9 +149,22 @@ curl http://127.0.0.1:8000/health
 
 MCP tools list:
 ```powershell
-curl -X POST http://127.0.0.1:8000/mcp ^
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/mcp" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+If you want cURL syntax in PowerShell, use `curl.exe` (not `curl` alias):
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/mcp" ^
   -H "Content-Type: application/json" ^
   -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}"
+```
+
+Run MCP smoke test client:
+```powershell
+python scripts/mcp_smoke_test.py --base-url http://127.0.0.1:8000
 ```
 
 Docker run:
