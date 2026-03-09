@@ -1,10 +1,11 @@
 # mcp-finance-server
 
 ## Overview
-Template-only scaffold for an MCP finance tools server.
+Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 
 ## Skills Demonstrated
 - MCP (Model Context Protocol)
+- A2A (Agent-to-Agent) discovery
 - Tool building for AI agents
 - Cloud Run deployment
 - Financial data integration
@@ -18,21 +19,69 @@ Template-only scaffold for an MCP finance tools server.
 - `Dockerfile`
 - `cloudbuild.yaml`
 
-## Implementation Plan (To Do)
-1. Install MCP SDK (`pip install mcp`)
-2. Create MCP server base
-3. Build stock fundamentals tool
-4. Build earnings analyzer tool
-5. Build portfolio tracker tool
-6. Register tools with MCP server
-7. Add tool schemas
-8. Test with MCP client
-9. Containerize with Docker
-10. Deploy with Cloud Build + Cloud Run
-11. Write MCP integration guide
+## Current Progress
+- Module 1 completed: server bootstrap + A2A discovery card
+  - `GET /health` for uptime checks
+  - `GET /.well-known/agent.json` as an A2A agent card
+- Module 2 completed: first MCP-exposed finance tool
+  - `POST /mcp` with JSON-RPC methods: `tools/list`, `tools/call`
+  - `stock_fundamentals` implemented in `tools/stock_fundamentals.py`
+  - `health_check` and `stock_fundamentals` registered in MCP tool registry
+
+## Implementation Plan (Incremental)
+1. [x] Create server base
+2. [x] Add A2A discovery endpoint
+3. [x] Build stock fundamentals tool
+4. [x] Register first tools with MCP endpoint
+5. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
+6. [ ] Build earnings analyzer tool
+7. [ ] Build portfolio tracker tool
+8. [ ] Add tool schemas
+9. [ ] Test with MCP client
+10. [ ] Containerize with Docker
+11. [ ] Deploy with Cloud Build + Cloud Run
+12. [ ] Write MCP + A2A integration guide
 
 ## Business Value
 Extends any AI assistant with live Indian market data.
+
+## MCP + A2A Design
+- MCP handles structured tool execution between client and server.
+- A2A card (`/.well-known/agent.json`) helps other agents discover:
+  - server identity
+  - supported protocols
+  - available/planned tools
+  - endpoint locations
+- Together:
+  - MCP = how tools are invoked
+  - A2A = how agents find and understand each other
+
+## MCP Request Examples
+List tools:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+Call stock fundamentals:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "stock_fundamentals",
+    "arguments": {
+      "symbol": "INFY",
+      "exchange": "NSE"
+    }
+  }
+}
+```
 
 ## Tech Stack
 - Python MCP SDK
