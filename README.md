@@ -51,6 +51,10 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - Added `POST /a2a/tasks` to create agent tasks (`call_tool`)
   - Added `GET /a2a/tasks/{task_id}` to poll task status/result
   - Reused existing tool execution path for MCP + A2A parity
+- Module 9 completed: API contract validation
+  - Added Pydantic request models for `/mcp` and `/a2a/tasks`
+  - Invalid `tools/call` params now return JSON-RPC `-32602` (`Invalid params`)
+  - Improves predictable request/response behavior for MCP clients
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -66,7 +70,8 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 11. [x] Deploy with Cloud Build + Cloud Run (pipeline file added)
 12. [x] Add official MCP SDK server entrypoint
 13. [x] Add A2A task execution endpoint
-14. [ ] Write MCP + A2A integration guide
+14. [x] Add API request validation models
+15. [ ] Write MCP + A2A integration guide
 
 ## Business Value
 Extends any AI assistant with live Indian market data.
@@ -196,6 +201,14 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/a2a/tasks" `
 A2A task poll:
 ```powershell
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/a2a/tasks/<task_id>" -Method Get
+```
+
+Invalid params example (`-32602`):
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/mcp" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"jsonrpc":"2.0","id":99,"method":"tools/call","params":{"arguments":{}}}'
 ```
 
 Docker run:

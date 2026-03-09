@@ -14,6 +14,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
 from tools.earnings_analyzer import get_earnings_analysis
 from tools.portfolio_tracker import analyze_portfolio
@@ -23,8 +24,27 @@ from tools.stock_fundamentals import get_stock_fundamentals
 app = FastAPI(
     title="mcp-finance-server",
     description="Incremental MCP finance server with A2A discovery.",
-    version="0.5.0",
+    version="0.6.0",
 )
+
+
+class JsonRpcRequest(BaseModel):
+    jsonrpc: str
+    method: str
+    params: dict[str, Any] = Field(default_factory=dict)
+    id: Any | None = None
+
+
+class ToolCallParams(BaseModel):
+    name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class A2ATaskCreateRequest(BaseModel):
+    action: str
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    requester: str | None = None
 
 
 @app.get("/health")
@@ -221,18 +241,18 @@ A2A_TASKS: dict[str, dict[str, Any]] = {}
 
 
 @app.post("/mcp")
-def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+def mcp_endpoint(payload: JsonRpcRequest) -> dict[str, Any]:
     """
     Minimal JSON-RPC endpoint with MCP-style methods:
     - tools/list
     - tools/call
     """
-    if payload.get("jsonrpc") != "2.0":
+    if payload.jsonrpc != "2.0":
         raise HTTPException(status_code=400, detail="Invalid JSON-RPC version.")
 
-    method = payload.get("method")
-    params = payload.get("params", {})
-    request_id = payload.get("id")
+    method = payload.method
+    params = payload.params
+    request_id = payload.id
 
     if method == "tools/list":
         result = {
@@ -244,11 +264,13 @@ def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
         return _mcp_success(request_id, result)
 
     if method == "tools/call":
-        tool_name = params.get("name")
-        arguments = params.get("arguments", {})
+        try:
+            call = ToolCallParams.model_validate(params)
+        except Exception as exc:
+            return _mcp_error(request_id, -32602, f"Invalid params: {exc}")
 
         try:
-            result = _execute_tool(tool_name=tool_name, arguments=arguments)
+            result = _execute_tool(tool_name=call.name, arguments=call.arguments)
             return _mcp_success(request_id, {"content": [{"type": "json", "json": result}]})
         except Exception as exc:
             return _mcp_error(request_id, -32000, str(exc))
@@ -257,7 +279,7 @@ def mcp_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.post("/a2a/tasks")
-def create_a2a_task(payload: dict[str, Any]) -> dict[str, Any]:
+def create_a2a_task(payload: A2ATaskCreateRequest) -> dict[str, Any]:
     """
     Create an A2A task that requests this agent to execute one tool.
 
@@ -269,16 +291,13 @@ def create_a2a_task(payload: dict[str, Any]) -> dict[str, Any]:
       "requester": "agent-name-optional"
     }
     """
-    action = payload.get("action")
-    tool_name = payload.get("tool_name")
-    arguments = payload.get("arguments", {})
-    requester = payload.get("requester")
+    action = payload.action
+    tool_name = payload.tool_name
+    arguments = payload.arguments
+    requester = payload.requester
 
     if action != "call_tool":
         raise HTTPException(status_code=400, detail="Unsupported action. Use 'call_tool'.")
-    if not tool_name:
-        raise HTTPException(status_code=400, detail="Missing required field: tool_name")
-
     task_id = str(uuid4())
     task = {
         "task_id": task_id,
