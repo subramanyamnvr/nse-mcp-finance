@@ -34,6 +34,10 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - `portfolio_tracker` implemented in `tools/portfolio_tracker.py`
   - Calculates per-position current value and P/L, plus portfolio totals
   - Registered in MCP registry and A2A agent card
+- Module 5 completed: run + containerize setup
+  - Added `requirements.txt`
+  - Added runnable `Dockerfile`
+  - Added `cloudbuild.yaml` deployment pipeline for Cloud Run
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -42,11 +46,11 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 4. [x] Register first tools with MCP endpoint
 5. [x] Build earnings analyzer tool
 6. [x] Build portfolio tracker tool
-7. [ ] Install MCP SDK (`pip install mcp`) and switch to official SDK server primitives
+7. [x] Add runtime dependencies and basic container/deploy setup
 8. [ ] Add tool schemas
 9. [ ] Test with MCP client
-10. [ ] Containerize with Docker
-11. [ ] Deploy with Cloud Build + Cloud Run
+10. [x] Containerize with Docker
+11. [x] Deploy with Cloud Build + Cloud Run (pipeline file added)
 12. [ ] Write MCP + A2A integration guide
 
 ## Business Value
@@ -123,6 +127,33 @@ Call portfolio tracker:
     }
   }
 }
+```
+
+## How To Run
+Local run:
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn server:app --reload --host 0.0.0.0 --port 8000
+```
+
+Health check:
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+MCP tools list:
+```powershell
+curl -X POST http://127.0.0.1:8000/mcp ^
+  -H "Content-Type: application/json" ^
+  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}"
+```
+
+Docker run:
+```powershell
+docker build -t nse-mcp-finance:local .
+docker run --rm -p 8080:8080 nse-mcp-finance:local
 ```
 
 ## Tech Stack
