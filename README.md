@@ -14,6 +14,7 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 ## Project Structure
 - `server.py`
 - `mcp_stdio_server.py`
+- `MCP_A2A_INTEGRATION_GUIDE.md`
 - `tools/stock_fundamentals.py`
 - `tools/earnings_analyzer.py`
 - `tools/portfolio_tracker.py`
@@ -55,6 +56,9 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
   - Added Pydantic request models for `/mcp` and `/a2a/tasks`
   - Invalid `tools/call` params now return JSON-RPC `-32602` (`Invalid params`)
   - Improves predictable request/response behavior for MCP clients
+- Module 10 completed: MCP + A2A integration guide
+  - Added `MCP_A2A_INTEGRATION_GUIDE.md`
+  - Documents architecture, flows, examples, and production next steps
 
 ## Implementation Plan (Incremental)
 1. [x] Create server base
@@ -71,7 +75,7 @@ Incremental MCP finance tools server with A2A (agent-to-agent) discoverability.
 12. [x] Add official MCP SDK server entrypoint
 13. [x] Add A2A task execution endpoint
 14. [x] Add API request validation models
-15. [ ] Write MCP + A2A integration guide
+15. [x] Write MCP + A2A integration guide
 
 ## Business Value
 Extends any AI assistant with live Indian market data.
@@ -87,6 +91,8 @@ Extends any AI assistant with live Indian market data.
   - MCP = how tools are invoked
   - A2A = how agents find and understand each other
   - A2A task API = how agents can request/track work asynchronously
+
+Detailed walkthrough: [`MCP_A2A_INTEGRATION_GUIDE.md`](./MCP_A2A_INTEGRATION_GUIDE.md)
 
 ## MCP Request Examples
 List tools:
